@@ -1,6 +1,7 @@
 package smarthome
 
 import (
+	"sort"
 	"sync"
 	"time"
 )
@@ -74,6 +75,40 @@ func (c *Client) ShutterState(name string) (state ShutterState, err error) {
 		shutter = c.registerShutter(name)
 	}
 	return shutter.State(), nil
+}
+
+type Shutter struct {
+	Name string
+	ShutterState
+}
+
+type shuttersByName []Shutter
+
+func (items shuttersByName) Len() int {
+	return len(items)
+}
+
+func (items shuttersByName) Swap(i, j int) {
+	items[i], items[j] = items[j], items[i]
+}
+
+func (items shuttersByName) Less(i, j int) bool {
+	return items[i].Name < items[j].Name
+}
+
+func (c *Client) ListShutterStates() ([]Shutter, error) {
+	var shutters shuttersByName
+	for name := range c.shutters {
+		state, _ := c.ShutterState(name)
+		shutter := Shutter{
+			Name:         name,
+			ShutterState: state,
+		}
+		shutters = append(shutters, shutter)
+	}
+
+	sort.Sort(shutters)
+	return shutters, nil
 }
 
 // SetShutter instructs a shutter to move to a certain percentage closed.

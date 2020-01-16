@@ -18,16 +18,17 @@ package main
 import (
 	"flag"
 	"os"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	smarthomev1alpha1 "github.com/loodse/godays-2020-k8s-workshop/smart-home/api/v1alpha1"
 	"github.com/loodse/godays-2020-k8s-workshop/smart-home/controllers"
 	"github.com/loodse/godays-2020-k8s-workshop/smart-home/pkg/smarthome"
+	"github.com/loodse/godays-2020-k8s-workshop/smart-home/pkg/ui"
 )
 
 var (
@@ -48,7 +49,10 @@ func main() {
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 	flag.Parse()
 
-	ctrl.SetLogger(zap.Logger(true))
+	smartHomeClient := smarthome.NewClient()
+	u := ui.NewUI(smartHomeClient, 1*time.Second)
+
+	ctrl.SetLogger(u.Logger())
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
@@ -64,15 +68,17 @@ func main() {
 	if err = (&controllers.ShutterReconciler{
 		Client:          mgr.GetClient(),
 		Log:             ctrl.Log.WithName("controllers").WithName("Shutter"),
-		SmartHomeClient: smarthome.NewClient(),
+		SmartHomeClient: smartHomeClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Shutter")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
 
+	go u.Run()
+
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(u.CloseCh()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
