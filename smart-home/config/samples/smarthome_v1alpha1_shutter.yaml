@@ -1,0 +1,6 @@
+apiVersion: smarthome.loodse.io/v1alpha1
+kind: Shutter
+metadata:
+  name: living-room
+spec:
+  closedPercentage: 20

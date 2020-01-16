@@ -1,0 +1,7 @@
+version: "2"
+domain: loodse.io
+repo: github.com/loodse/godays-2020-k8s-workshop/smart-home
+resources:
+- group: smarthome
+  version: v1alpha1
+  kind: Shutter
