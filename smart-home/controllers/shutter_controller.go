@@ -18,7 +18,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -45,7 +44,7 @@ func (r *ShutterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		_      = r.Log.WithValues("shutter", req.NamespacedName)
 	)
 
-	// Load Shutter instance from cache
+	// Load Shutter instance from cache.
 	shutter := &smarthomev1alpha1.Shutter{}
 	if err := r.Get(ctx, req.NamespacedName, shutter); err != nil {
 		return result, client.IgnoreNotFound(err)
@@ -54,11 +53,11 @@ func (r *ShutterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// Just update the Shutter - it will not move when it's already in position
 	// If you have a LOT of shutters and want to save network bandwith,
 	// you can also check the state of the shutter first.
-	if err := r.SmartHomeClient.SetShutter(req.NamespacedName.String(), shutter.Spec.ClosedPercentage); err != nil {
+	if err := r.SmartHomeClient.Shutters().Set(ctx, req.NamespacedName.String(), shutter.Spec.ClosedPercentage); err != nil {
 		return result, fmt.Errorf("updating shutter: %v", err)
 	}
 
-	state, err := r.SmartHomeClient.ShutterState(req.NamespacedName.String())
+	state, err := r.SmartHomeClient.Shutters().Get(ctx, req.NamespacedName.String())
 	if err != nil {
 		return result, fmt.Errorf("checking shutter state: %v", err)
 	}
@@ -66,7 +65,7 @@ func (r *ShutterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// Update the Status of the shutter, to tell the rest of the system what is going on.
 	shutter.Status.ObservedGeneration = shutter.Generation
 	shutter.Status.ClosedPercentage = state.Current
-	if state.IsMoving {
+	if state.Moving {
 		shutter.Status.Phase = smarthomev1alpha1.ShutterMoving
 	} else {
 		shutter.Status.Phase = smarthomev1alpha1.ShutterIdle
@@ -75,10 +74,9 @@ func (r *ShutterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return result, fmt.Errorf("updating shutter status: %v", err)
 	}
 
-	// When the Shutter is not at Target ... closeness yet
-	// check again after 1s
+	// When the Shutter is not at target position, requeue this entry to check again.
 	if state.Current != state.Target {
-		result.RequeueAfter = 1 * time.Second
+		result.Requeue = true
 		return result, nil
 	}
 

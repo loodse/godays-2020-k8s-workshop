@@ -26,12 +26,12 @@ func TestShutter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			s := newShutter()
+			s := newShutter("test")
 			s.closedPercentage = test.Start
 			s.incrementWait = 0
 			defer s.close()
 
-			err := s.SetClosed(test.SetClosed)
+			err := s.Set(test.SetClosed)
 			if err != nil {
 				t.Error("unexpected error calling .SetClosed")
 			}
@@ -46,7 +46,7 @@ func TestShutter(t *testing.T) {
 					t.Errorf("timeout waiting for shutter to close to %d%%, is: %d", test.SetClosed, p)
 					return
 				default:
-					p = s.State().Current
+					p = s.Shutter().Current
 					if p == test.SetClosed {
 						return
 					}
@@ -54,8 +54,4 @@ func TestShutter(t *testing.T) {
 			}
 		})
 	}
-}
-
-func Test_capDiff(t *testing.T) {
-	// if c := capDiff(-43, 10)
 }

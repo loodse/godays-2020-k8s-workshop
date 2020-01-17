@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -90,12 +91,12 @@ func (u *UI) draw() {
 
 	elements = append(elements, shuttersTitle)
 
-	shutters, _ := u.client.ListShutterStates()
+	shutters, _ := u.client.Shutters().List(context.Background())
 	pos := 2
 	for _, shutter := range shutters {
 		g := widgets.NewGauge()
 		g.Title = " " + shutter.Name + " "
-		if shutter.IsMoving {
+		if shutter.Moving {
 			g.Title = g.Title + "<moving> "
 		}
 		g.Percent = shutter.Current
