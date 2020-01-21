@@ -1,0 +1,6 @@
+apiVersion: training.loodse.io/v1alpha1
+kind: PodHealth
+metadata:
+  name: all-pods
+spec:
+  podSelector: {}

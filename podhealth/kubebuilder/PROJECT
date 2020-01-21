@@ -1,0 +1,7 @@
+version: "2"
+domain: loodse.io
+repo: github.com/loodse/operator-workshop/podhealth/kubebuilder
+resources:
+- group: training
+  version: v1alpha1
+  kind: PodHealth
